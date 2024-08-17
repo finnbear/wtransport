@@ -455,7 +455,8 @@ impl ServerConfigBuilder<states::WantsIdentity> {
     /// # Parameters
     ///
     /// - `tls_config`: A custom [`TlsServerConfig`] instance that allows you to specify
-    ///   detailed TLS settings, such as ciphersuites, certificate verification, and more.
+    ///   detailed TLS settings, such as ciphersuites, certificate verification, and more. It must
+    ///   support TLS 1.3.
     /// - `quic_transport_config`: A custom [`QuicTransportConfig`] instance that allows you to specify
     ///   various QUIC transport-layer settings according to your requirements.
     #[cfg(feature = "quinn")]
@@ -921,7 +922,8 @@ impl ClientConfigBuilder<states::WantsRootStore> {
     /// # Parameters
     ///
     /// - `tls_config`: A custom [`TlsClientConfig`] instance that allows you to specify
-    ///   detailed TLS settings, such as ciphersuites, certificate verification, and more.
+    ///   detailed TLS settings, such as ciphersuites, certificate verification, and more. It must
+    ///   support TLS 1.3.
     /// - `quic_transport_config`: A custom [`QuicTransportConfig`] instance that allows you to specify
     ///   various QUIC transport-layer settings according to your requirements.
     #[cfg(feature = "quinn")]
