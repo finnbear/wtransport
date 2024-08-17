@@ -357,7 +357,7 @@ impl ServerConfigBuilder<states::WantsIdentity> {
     }
 
     /// Allows for manual configuration of a custom TLS setup using a provided
-    /// [`rustls::ServerConfig`].
+    /// [`rustls::ServerConfig`], which must support TLS 1.3.
     ///
     /// This method is provided for advanced users who need fine-grained control over the
     /// TLS configuration. It allows you to pass a preconfigured [`rustls::ServerConfig`]
@@ -485,6 +485,10 @@ impl ServerConfigBuilder<states::WantsIdentity> {
 
 impl ServerConfigBuilder<states::WantsTransportConfigServer> {
     /// Completes configuration process.
+    ///
+    /// # Panics
+    ///
+    /// If `with_custom_tls` was used without proper TLS 1.3 support.
     #[must_use]
     pub fn build(self) -> ServerConfig {
         let mut quic_config = QuicServerConfig::with_crypto(Arc::new(
@@ -853,7 +857,7 @@ impl ClientConfigBuilder<states::WantsRootStore> {
     }
 
     /// Allows for manual configuration of a custom TLS setup using a provided
-    /// [`rustls::ClientConfig`].
+    /// [`rustls::ClientConfig`], which must support TLS 1.3.
     ///
     /// This method is provided for advanced users who need fine-grained control over the
     /// TLS configuration. It allows you to pass a preconfigured [`rustls::ClientConfig`]
