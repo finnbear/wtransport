@@ -43,12 +43,12 @@ impl SendStream {
         self.0.write_all(buf).await
     }
 
-    /// Shut down the stream gracefully.
+    /// Shuts down the send stream gracefully.
     ///
-    /// No new data may be written after calling this method. Completes when the peer has
-    /// acknowledged all sent data, retransmitting data as needed.
+    /// Completes when the peer has acknowledged all sent data,
+    /// retransmitting data as needed.
     #[inline(always)]
-    pub async fn finish(&mut self) -> Result<(), StreamWriteError> {
+    pub async fn finish(mut self) -> Result<(), StreamWriteError> {
         self.0.finish()?;
         self.0.stopped().await
     }
@@ -79,20 +79,24 @@ impl SendStream {
 
     /// Closes the send stream immediately.
     ///
-    /// No new data can be written after calling this method. Locally buffered data is dropped, and
-    /// previously transmitted data will no longer be retransmitted if lost. If an attempt has
-    /// already been made to finish the stream, the peer may still receive all written data.
+    /// Locally buffered data is dropped, and previously transmitted data will
+    /// no longer be retransmitted if lost.
     #[inline(always)]
     pub fn reset(self, error_code: VarInt) {
         self.0.reset(error_code);
     }
 
-    /// Awaits for the stream to be stopped by the peer.
+    /// Passively waits for the send stream to be stopped.
     ///
-    /// If the stream is stopped the error code will be stored in [`StreamWriteError::Stopped`].
+    /// The error code may be stored in [`StreamWriteError::Stopped`].
     #[inline(always)]
-    pub async fn stopped(mut self) -> Result<(), StreamWriteError> {
-        self.0.stopped().await
+    pub async fn stopped(mut self) -> StreamWriteError {
+        // Don't expect `Ok` because we didn't call `finish`.
+        self.0
+            .stopped()
+            .await
+            .err()
+            .unwrap_or(StreamWriteError::NotConnected)
     }
 
     /// Returns a reference to the underlying QUIC stream.
