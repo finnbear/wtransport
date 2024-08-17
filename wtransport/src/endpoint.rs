@@ -693,7 +693,7 @@ impl SessionRequest {
 
     async fn reject(mut self, response: SessionResponseProto) {
         let _ = self.send_response(response).await;
-        self.stream_session.finish();
+        self.stream_session.finish().await;
     }
 
     async fn send_response(

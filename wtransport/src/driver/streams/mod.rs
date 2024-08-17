@@ -42,11 +42,15 @@ impl QuicSendStream {
     }
 
     #[inline(always)]
-    pub fn finish(&mut self) -> Result<(), StreamWriteError> {
+    /// Shuts down the send stream gracefully.
+    ///
+    /// Completes when the peer has acknowledged all sent data,
+    /// retransmitting data as needed.
+    pub async fn finish(mut self) -> Result<(), StreamWriteError> {
         self.0
             .finish()
             .map_err(|_| StreamWriteError::NotConnected)?;
-        Ok(())
+        self.stopped().await
     }
 
     #[inline(always)]
@@ -538,8 +542,8 @@ pub mod session {
             self.proto.request()
         }
 
-        pub fn finish(mut self) {
-            let _ = self.stream.0.finish();
+        pub async fn finish(self) {
+            let _ = self.stream.0.finish().await;
         }
     }
 }
