@@ -222,6 +222,8 @@ pub struct ServerConfig {
     pub(crate) bind_address: SocketAddr,
     pub(crate) dual_stack_config: Ipv6DualStackConfig,
     pub(crate) quic_config: QuicServerConfig,
+    pub(crate) max_concurrent_connections: usize,
+    pub(crate) use_retry: bool,
 }
 
 impl ServerConfig {
@@ -480,6 +482,8 @@ impl ServerConfigBuilder<states::WantsIdentity> {
             tls_config,
             transport_config,
             migration: true,
+            max_concurrent_connections: 100_000,
+            use_retry: false,
         })
     }
 }
@@ -503,7 +507,23 @@ impl ServerConfigBuilder<states::WantsTransportConfigServer> {
             bind_address: self.0.bind_address,
             dual_stack_config: self.0.dual_stack_config,
             quic_config,
+            max_concurrent_connections: self.0.max_concurrent_connections,
+            use_retry: self.0.use_retry,
         }
+    }
+
+    /// Maximum number of connections that can be open simultaneously before new
+    /// connections are rejected. The default is 100,000.
+    pub fn max_concurrent_connections(&mut self, max: usize) {
+        self.0.max_concurrent_connections = max;
+    }
+
+    /// Whether to require clients to prove ownership of an address before committing resources.
+    ///
+    /// Introduces an additional round-trip to the handshake to make denial of service attacks
+    /// more difficult. The default is `false`.
+    pub fn use_retry(&mut self, use_retry: bool) {
+        self.0.use_retry = use_retry;
     }
 
     /// Maximum duration of inactivity to accept before timing out the connection.
@@ -1062,6 +1082,8 @@ pub mod states {
         pub(super) tls_config: TlsServerConfig,
         pub(super) transport_config: quinn::TransportConfig,
         pub(super) migration: bool,
+        pub(super) max_concurrent_connections: usize,
+        pub(super) use_retry: bool,
     }
 
     /// Config builder state where transport properties can be set.

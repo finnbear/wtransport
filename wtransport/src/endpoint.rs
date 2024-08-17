@@ -19,7 +19,6 @@ use socket2::Socket;
 use socket2::Type as SocketType;
 use std::collections::HashMap;
 use std::future::Future;
-use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::net::SocketAddrV4;
 use std::net::SocketAddrV6;
@@ -46,7 +45,8 @@ pub mod endpoint_side {
     ///
     /// Use [`Endpoint::server`] to create and server-endpoint.
     pub struct Server {
-        pub(super) _marker: PhantomData<()>,
+        pub(super) max_concurrent_connections: usize,
+        pub(super) use_retry: bool,
     }
 
     /// Type of endpoint opening a WebTransport connection.
@@ -164,22 +164,34 @@ impl Endpoint<endpoint_side::Server> {
         Ok(Self {
             endpoint,
             side: endpoint_side::Server {
-                _marker: PhantomData,
+                max_concurrent_connections: server_config.max_concurrent_connections,
+                use_retry: server_config.use_retry,
             },
         })
     }
 
     /// Get the next incoming connection attempt from a client.
     pub async fn accept(&self) -> IncomingSession {
-        let quic_incoming = self
-            .endpoint
-            .accept()
-            .await
-            .expect("Endpoint cannot be closed");
+        loop {
+            let quic_incoming = self
+                .endpoint
+                .accept()
+                .await
+                .expect("Endpoint cannot be closed");
 
-        debug!("New incoming QUIC connection");
+            debug!("New incoming QUIC connection");
 
-        IncomingSession::new(quic_incoming)
+            if self.endpoint.open_connections() >= self.side.max_concurrent_connections {
+                quic_incoming.refuse();
+                continue;
+            }
+            if self.side.use_retry && !quic_incoming.remote_address_validated() {
+                // Cannot fail, already checked for a validated address.
+                quic_incoming.retry().unwrap();
+                continue;
+            }
+            break IncomingSession::new(quic_incoming);
+        }
     }
 
     /// Reloads the server configuration.
