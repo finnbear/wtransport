@@ -625,7 +625,7 @@ pub mod client {
     use super::*;
     use rustls::client::danger::ServerCertVerified;
     use rustls::client::danger::ServerCertVerifier;
-    use rustls::crypto::CryptoProvider;
+    use rustls::crypto::WebPkiSupportedAlgorithms;
     use rustls::ClientConfig as TlsClientConfig;
 
     /// Builds a default TLS client configuration with safe defaults.
@@ -673,13 +673,24 @@ pub mod client {
     ///
     /// Therefore, it's advisable to use it judiciously, and avoid using it in
     /// production environments.
-    #[derive(Default, Debug)]
-    pub struct NoServerVerification {}
+    #[derive(Debug)]
+    pub struct NoServerVerification {
+        supported: WebPkiSupportedAlgorithms,
+    }
+
+    impl Default for NoServerVerification {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
     impl NoServerVerification {
         /// Creates a new instance of `NoServerVerification`.
         pub fn new() -> NoServerVerification {
-            NoServerVerification {}
+            NoServerVerification {
+                supported: rustls::crypto::ring::default_provider()
+                    .signature_verification_algorithms,
+            }
         }
     }
 
@@ -701,14 +712,7 @@ pub mod client {
             cert: &CertificateDer<'_>,
             dss: &rustls::DigitallySignedStruct,
         ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls12_signature(
-                message,
-                cert,
-                dss,
-                &CryptoProvider::get_default()
-                    .unwrap()
-                    .signature_verification_algorithms,
-            )
+            rustls::crypto::verify_tls12_signature(message, cert, dss, &self.supported)
         }
 
         fn verify_tls13_signature(
@@ -717,21 +721,11 @@ pub mod client {
             cert: &CertificateDer<'_>,
             dss: &rustls::DigitallySignedStruct,
         ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls13_signature(
-                message,
-                cert,
-                dss,
-                &CryptoProvider::get_default()
-                    .unwrap()
-                    .signature_verification_algorithms,
-            )
+            rustls::crypto::verify_tls13_signature(message, cert, dss, &self.supported)
         }
 
         fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            CryptoProvider::get_default()
-                .unwrap()
-                .signature_verification_algorithms
-                .supported_schemes()
+            self.supported.supported_schemes()
         }
     }
 
@@ -754,6 +748,7 @@ pub mod client {
     #[derive(Debug)]
     pub struct ServerHashVerification {
         hashes: std::collections::BTreeSet<Sha256Digest>,
+        supported: WebPkiSupportedAlgorithms,
     }
 
     impl ServerHashVerification {
@@ -773,6 +768,8 @@ pub mod client {
 
             Self {
                 hashes: BTreeSet::from_iter(hashes),
+                supported: rustls::crypto::ring::default_provider()
+                    .signature_verification_algorithms,
             }
         }
     }
@@ -843,14 +840,7 @@ pub mod client {
             cert: &CertificateDer<'_>,
             dss: &rustls::DigitallySignedStruct,
         ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls12_signature(
-                message,
-                cert,
-                dss,
-                &CryptoProvider::get_default()
-                    .unwrap()
-                    .signature_verification_algorithms,
-            )
+            rustls::crypto::verify_tls12_signature(message, cert, dss, &self.supported)
         }
 
         fn verify_tls13_signature(
@@ -859,21 +849,11 @@ pub mod client {
             cert: &CertificateDer<'_>,
             dss: &rustls::DigitallySignedStruct,
         ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls13_signature(
-                message,
-                cert,
-                dss,
-                &CryptoProvider::get_default()
-                    .unwrap()
-                    .signature_verification_algorithms,
-            )
+            rustls::crypto::verify_tls13_signature(message, cert, dss, &self.supported)
         }
 
         fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            CryptoProvider::get_default()
-                .unwrap()
-                .signature_verification_algorithms
-                .supported_schemes()
+            self.supported.supported_schemes()
         }
     }
 }
