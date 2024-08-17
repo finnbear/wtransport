@@ -64,9 +64,13 @@ impl LocalSettingsStream {
     pub async fn run(&mut self) -> DriverError {
         match self.stream.as_mut() {
             Some(stream) => match stream.stopped().await {
-                StreamWriteError::NotConnected => DriverError::NotConnected,
-                StreamWriteError::Stopped(_) => DriverError::Proto(ErrorCode::ClosedCriticalStream),
-                StreamWriteError::QuicProto => DriverError::Proto(ErrorCode::ClosedCriticalStream),
+                Ok(()) | Err(StreamWriteError::NotConnected) => DriverError::NotConnected,
+                Err(StreamWriteError::Stopped(_)) => {
+                    DriverError::Proto(ErrorCode::ClosedCriticalStream)
+                }
+                Err(StreamWriteError::QuicProto) => {
+                    DriverError::Proto(ErrorCode::ClosedCriticalStream)
+                }
             },
             None => pending().await,
         }

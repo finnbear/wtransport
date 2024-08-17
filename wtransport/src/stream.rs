@@ -48,8 +48,9 @@ impl SendStream {
     /// No new data may be written after calling this method. Completes when the peer has
     /// acknowledged all sent data, retransmitting data as needed.
     #[inline(always)]
-    pub fn finish(&mut self) -> Result<(), StreamWriteError> {
-        self.0.finish()
+    pub async fn finish(&mut self) -> Result<(), StreamWriteError> {
+        self.0.finish()?;
+        self.0.stopped().await
     }
 
     /// Returns the [`StreamId`] associated.
@@ -90,7 +91,7 @@ impl SendStream {
     ///
     /// If the stream is stopped the error code will be stored in [`StreamWriteError::Stopped`].
     #[inline(always)]
-    pub async fn stopped(mut self) -> StreamWriteError {
+    pub async fn stopped(mut self) -> Result<(), StreamWriteError> {
         self.0.stopped().await
     }
 

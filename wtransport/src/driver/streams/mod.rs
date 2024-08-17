@@ -59,13 +59,13 @@ impl QuicSendStream {
         self.0.priority().expect("Stream has been reset")
     }
 
-    pub async fn stopped(&mut self) -> StreamWriteError {
+    pub async fn stopped(&mut self) -> Result<(), StreamWriteError> {
         match self.0.stopped().await {
-            Ok(Some(code)) => StreamWriteError::Stopped(varint_q2w(code)),
+            Ok(Some(code)) => Err(StreamWriteError::Stopped(varint_q2w(code))),
             // See https://github.com/quinn-rs/quinn/commit/130d956efc2330a27f2f3b6cab0bacfc47d60fec#diff-8db1ab5b42ee5108f8e3e8b0ef374eef1c88e39f78dd884d5311c050bb5fe3a8L210-L211
-            Ok(None) => StreamWriteError::QuicProto,
-            Err(quinn::StoppedError::ConnectionLost(_)) => StreamWriteError::NotConnected,
-            Err(quinn::StoppedError::ZeroRttRejected) => StreamWriteError::QuicProto,
+            Ok(None) => Ok(()),
+            Err(quinn::StoppedError::ConnectionLost(_)) => Err(StreamWriteError::NotConnected),
+            Err(quinn::StoppedError::ZeroRttRejected) => Err(StreamWriteError::QuicProto),
         }
     }
 
@@ -486,7 +486,7 @@ pub mod unilocal {
             self.proto.kind()
         }
 
-        pub async fn stopped(&mut self) -> StreamWriteError {
+        pub async fn stopped(&mut self) -> Result<(), StreamWriteError> {
             self.stream.stopped().await
         }
 
