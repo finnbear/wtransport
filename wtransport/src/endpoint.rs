@@ -171,7 +171,7 @@ impl Endpoint<endpoint_side::Server> {
 
     /// Get the next incoming connection attempt from a client.
     pub async fn accept(&self) -> IncomingSession {
-        let quic_connecting = self
+        let quic_incoming = self
             .endpoint
             .accept()
             .await
@@ -179,7 +179,7 @@ impl Endpoint<endpoint_side::Server> {
 
         debug!("New incoming QUIC connection");
 
-        IncomingSession::new(quic_connecting)
+        IncomingSession::new(quic_incoming)
     }
 
     /// Reloads the server configuration.
@@ -206,8 +206,9 @@ impl Endpoint<endpoint_side::Server> {
     }
 
     /// Rejects new incoming connections without affecting existing connections
+    #[deprecated = "this is no longer supported"]
     pub fn reject_new_connections(&self) {
-        self.endpoint.reject_new_connections();
+        // See https://github.com/quinn-rs/quinn/commit/2925d2bd10a9c2baa6cbed0132e77e274c1a4a1a
     }
 }
 
@@ -570,12 +571,12 @@ type DynFutureIncomingSession =
 pub struct IncomingSession(Pin<Box<DynFutureIncomingSession>>);
 
 impl IncomingSession {
-    fn new(quic_connecting: quinn::Connecting) -> Self {
-        Self(Box::pin(Self::accept(quic_connecting)))
+    fn new(quic_incoming: quinn::Incoming) -> Self {
+        Self(Box::pin(Self::accept(quic_incoming)))
     }
 
-    async fn accept(quic_connecting: quinn::Connecting) -> Result<SessionRequest, ConnectionError> {
-        let quic_connection = quic_connecting.await?;
+    async fn accept(quic_incoming: quinn::Incoming) -> Result<SessionRequest, ConnectionError> {
+        let quic_connection = quic_incoming.await?;
 
         let driver = Driver::init(quic_connection.clone());
 
@@ -698,7 +699,7 @@ impl SessionRequest {
 
     async fn reject(mut self, response: SessionResponseProto) {
         let _ = self.send_response(response).await;
-        self.stream_session.finish().await;
+        self.stream_session.finish();
     }
 
     async fn send_response(

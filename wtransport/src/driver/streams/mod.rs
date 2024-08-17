@@ -42,8 +42,8 @@ impl QuicSendStream {
     }
 
     #[inline(always)]
-    pub async fn finish(&mut self) -> Result<(), StreamWriteError> {
-        self.0.finish().await?;
+    pub fn finish(&mut self) -> Result<(), StreamWriteError> {
+        self.0.finish().map_err(|_| StreamWriteError::NotConnected)?;
         Ok(())
     }
 
@@ -59,9 +59,10 @@ impl QuicSendStream {
 
     pub async fn stopped(&mut self) -> StreamWriteError {
         match self.0.stopped().await {
-            Ok(code) => StreamWriteError::Stopped(varint_q2w(code)),
+            Ok(Some(code)) => StreamWriteError::Stopped(varint_q2w(code)),
+            // See https://github.com/quinn-rs/quinn/commit/130d956efc2330a27f2f3b6cab0bacfc47d60fec#diff-8db1ab5b42ee5108f8e3e8b0ef374eef1c88e39f78dd884d5311c050bb5fe3a8L210-L211
+            Ok(None) => StreamWriteError::QuicProto,
             Err(quinn::StoppedError::ConnectionLost(_)) => StreamWriteError::NotConnected,
-            Err(quinn::StoppedError::UnknownStream) => StreamWriteError::QuicProto,
             Err(quinn::StoppedError::ZeroRttRejected) => StreamWriteError::QuicProto,
         }
     }
@@ -160,7 +161,7 @@ impl QuicRecvStream {
             .read_exact(buf)
             .await
             .map_err(|quic_error| match quic_error {
-                quinn::ReadExactError::FinishedEarly => StreamReadExactError::FinishedEarly,
+                quinn::ReadExactError::FinishedEarly(read) => StreamReadExactError::FinishedEarly(read),
                 quinn::ReadExactError::ReadError(read) => StreamReadExactError::Read(read.into()),
             })
     }
@@ -533,8 +534,8 @@ pub mod session {
             self.proto.request()
         }
 
-        pub async fn finish(mut self) {
-            let _ = self.stream.0.finish().await;
+        pub fn finish(mut self) {
+            let _ = self.stream.0.finish();
         }
     }
 }
@@ -543,8 +544,7 @@ impl From<quinn::WriteError> for StreamWriteError {
     fn from(error: quinn::WriteError) -> Self {
         match error {
             quinn::WriteError::Stopped(code) => StreamWriteError::Stopped(varint_q2w(code)),
-            quinn::WriteError::ConnectionLost(_) => StreamWriteError::NotConnected,
-            quinn::WriteError::UnknownStream => StreamWriteError::QuicProto,
+            quinn::WriteError::ConnectionLost(_) | quinn::WriteError::ClosedStream => StreamWriteError::NotConnected,
             quinn::WriteError::ZeroRttRejected => StreamWriteError::QuicProto,
         }
     }
@@ -554,8 +554,7 @@ impl From<quinn::ReadError> for StreamReadError {
     fn from(error: quinn::ReadError) -> Self {
         match error {
             quinn::ReadError::Reset(code) => StreamReadError::Reset(varint_q2w(code)),
-            quinn::ReadError::ConnectionLost(_) => StreamReadError::NotConnected,
-            quinn::ReadError::UnknownStream => StreamReadError::QuicProto,
+            quinn::ReadError::ConnectionLost(_) | quinn::ReadError::ClosedStream => StreamReadError::NotConnected,
             quinn::ReadError::IllegalOrderedRead => StreamReadError::QuicProto,
             quinn::ReadError::ZeroRttRejected => StreamReadError::QuicProto,
         }

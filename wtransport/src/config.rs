@@ -376,7 +376,6 @@ impl ServerConfigBuilder<states::WantsIdentity> {
     /// let custom_tls_config = rustls::ServerConfig::builder();
     /// // Customize TLS settings here...
     /// # let custom_tls_config = custom_tls_config
-    /// #          .with_safe_defaults()
     /// #          .with_no_client_auth()
     /// #          .with_single_cert(todo!(), todo!()).unwrap();
     ///
@@ -488,7 +487,7 @@ impl ServerConfigBuilder<states::WantsTransportConfigServer> {
     /// Completes configuration process.
     #[must_use]
     pub fn build(self) -> ServerConfig {
-        let mut quic_config = QuicServerConfig::with_crypto(Arc::new(self.0.tls_config));
+        let mut quic_config = QuicServerConfig::with_crypto(Arc::new(quinn::crypto::rustls::QuicServerConfig::try_from(self.0.tls_config).expect("initial cipher suite missing")));
         quic_config.transport_config(Arc::new(self.0.transport_config));
         quic_config.migration(self.0.migration);
 
@@ -947,7 +946,7 @@ impl ClientConfigBuilder<states::WantsTransportConfigClient> {
     /// Completes configuration process.
     #[must_use]
     pub fn build(self) -> ClientConfig {
-        let mut quic_config = QuicClientConfig::new(Arc::new(self.0.tls_config));
+        let mut quic_config = QuicClientConfig::new(Arc::new(quinn::crypto::rustls::QuicClientConfig::try_from(self.0.tls_config).expect("initial cipher suite missing")));
         quic_config.transport_config(Arc::new(self.0.transport_config));
 
         ClientConfig {

@@ -90,15 +90,15 @@ pub enum ConnectingError {
     #[error("endpoint stopping")]
     EndpointStopping,
 
-    /// The number of active connections on the local endpoint is at the limit
+    /// The connection could not be created because not enough of the CID space is available
     ///
-    /// Try using longer connection IDs.
-    #[error("too many connections")]
-    TooManyConnections,
+    /// Try using longer connection IDs
+    #[error("CIDs exhausted")]
+    CidsExhausted,
 
-    /// The domain name supplied was malformed
-    #[error("invalid DNS name: {0}")]
-    InvalidDnsName(String),
+    /// The server name supplied was malformed
+    #[error("invalid server name: {0}")]
+    InvalidServerName(String),
 
     /// The remote [`SocketAddr`] supplied was malformed.
     ///
@@ -120,8 +120,8 @@ impl ConnectingError {
     pub(crate) fn with_connect_error(error: quinn::ConnectError) -> Self {
         match error {
             quinn::ConnectError::EndpointStopping => ConnectingError::EndpointStopping,
-            quinn::ConnectError::TooManyConnections => ConnectingError::TooManyConnections,
-            quinn::ConnectError::InvalidDnsName(name) => ConnectingError::InvalidDnsName(name),
+            quinn::ConnectError::CidsExhausted => ConnectingError::CidsExhausted,
+            quinn::ConnectError::InvalidServerName(name) => ConnectingError::InvalidServerName(name),
             quinn::ConnectError::InvalidRemoteAddress(socket_addr) => {
                 ConnectingError::InvalidRemoteAddress(socket_addr)
             }
@@ -171,8 +171,8 @@ pub enum StreamReadError {
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum StreamReadExactError {
     /// The stream finished before all bytes were read.
-    #[error("stream finished too early")]
-    FinishedEarly,
+    #[error("stream finished too early ({0} bytes read)")]
+    FinishedEarly(usize),
 
     /// A read error occurred.
     #[error(transparent)]
@@ -290,6 +290,10 @@ impl From<quinn::ConnectionError> for ConnectionError {
             }),
             quinn::ConnectionError::TimedOut => ConnectionError::TimedOut,
             quinn::ConnectionError::LocallyClosed => ConnectionError::LocallyClosed,
+            quinn::ConnectionError::CidsExhausted => ConnectionError::QuicProto(QuicProtoError {
+                code: None,
+                reason: Cow::Borrowed("CIDs exhausted"),
+            })
         }
     }
 }

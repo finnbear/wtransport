@@ -48,8 +48,8 @@ impl SendStream {
     /// No new data may be written after calling this method. Completes when the peer has
     /// acknowledged all sent data, retransmitting data as needed.
     #[inline(always)]
-    pub async fn finish(&mut self) -> Result<(), StreamWriteError> {
-        self.0.finish().await
+    pub fn finish(&mut self) -> Result<(), StreamWriteError> {
+        self.0.finish()
     }
 
     /// Returns the [`StreamId`] associated.
