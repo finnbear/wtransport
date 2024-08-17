@@ -71,6 +71,10 @@ impl SendStream {
     }
 
     /// Gets the priority of the send stream.
+    ///
+    /// # Panics
+    ///
+    /// If `reset` was called.
     #[inline(always)]
     pub fn priority(&self) -> i32 {
         self.0.priority()
@@ -81,6 +85,10 @@ impl SendStream {
     /// No new data can be written after calling this method. Locally buffered data is dropped, and
     /// previously transmitted data will no longer be retransmitted if lost. If an attempt has
     /// already been made to finish the stream, the peer may still receive all written data.
+    ///
+    /// # Panics
+    ///
+    /// If `reset` was already called.
     #[inline(always)]
     pub fn reset(&mut self, error_code: VarInt) {
         self.0.reset(error_code);

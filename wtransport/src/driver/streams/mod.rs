@@ -59,6 +59,9 @@ impl QuicSendStream {
     }
 
     #[inline(always)]
+    /// # Panics
+    ///
+    /// If `reset` was called.
     pub fn priority(&self) -> i32 {
         self.0.priority().expect("Stream has been reset")
     }
@@ -74,6 +77,9 @@ impl QuicSendStream {
     }
 
     #[inline(always)]
+    /// # Panics
+    ///
+    /// If `reset` was already called.
     pub fn reset(&mut self, error_code: VarInt) {
         self.0
             .reset(varint_w2q(error_code))
