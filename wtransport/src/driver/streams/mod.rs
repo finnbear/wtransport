@@ -46,7 +46,7 @@ impl QuicSendStream {
     ///
     /// Completes when the peer has acknowledged all sent data,
     /// retransmitting data as needed.
-    pub async fn finish(mut self) -> Result<(), StreamWriteError> {
+    pub async fn finish(&mut self) -> Result<(), StreamWriteError> {
         self.0
             .finish()
             .map_err(|_| StreamWriteError::NotConnected)?;
@@ -74,7 +74,7 @@ impl QuicSendStream {
     }
 
     #[inline(always)]
-    pub fn reset(mut self, error_code: VarInt) {
+    pub fn reset(&mut self, error_code: VarInt) {
         self.0
             .reset(varint_w2q(error_code))
             .expect("Stream has been already reset");
@@ -542,7 +542,7 @@ pub mod session {
             self.proto.request()
         }
 
-        pub async fn finish(self) {
+        pub async fn finish(&mut self) {
             let _ = self.stream.0.finish().await;
         }
     }
