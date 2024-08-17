@@ -656,10 +656,6 @@ pub mod client {
         custom_verifier: Option<Arc<dyn ServerCertVerifier>>,
     ) -> TlsClientConfig {
         let mut config = TlsClientConfig::builder()
-            //.with_safe_default_cipher_suites()
-            //.with_safe_default_kx_groups()
-            //.with_safe_default_protocol_versions()
-            //.expect("Safe protocols should not error")
             .with_root_certificates(root_store)
             .with_no_client_auth();
 
@@ -700,25 +696,42 @@ pub mod client {
         }
 
         fn verify_tls12_signature(
-                &self,
-                message: &[u8],
-                cert: &CertificateDer<'_>,
-                dss: &rustls::DigitallySignedStruct,
-            ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls12_signature(message, cert, dss, &CryptoProvider::get_default().unwrap().signature_verification_algorithms)
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &rustls::DigitallySignedStruct,
+        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+            rustls::crypto::verify_tls12_signature(
+                message,
+                cert,
+                dss,
+                &CryptoProvider::get_default()
+                    .unwrap()
+                    .signature_verification_algorithms,
+            )
         }
 
         fn verify_tls13_signature(
-                &self,
-                message: &[u8],
-                cert: &CertificateDer<'_>,
-                dss: &rustls::DigitallySignedStruct,
-            ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls13_signature(message, cert, dss, &CryptoProvider::get_default().unwrap().signature_verification_algorithms)
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &rustls::DigitallySignedStruct,
+        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+            rustls::crypto::verify_tls13_signature(
+                message,
+                cert,
+                dss,
+                &CryptoProvider::get_default()
+                    .unwrap()
+                    .signature_verification_algorithms,
+            )
         }
 
         fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            CryptoProvider::get_default().unwrap().signature_verification_algorithms.supported_schemes()
+            CryptoProvider::get_default()
+                .unwrap()
+                .signature_verification_algorithms
+                .supported_schemes()
         }
     }
 
@@ -778,7 +791,9 @@ pub mod client {
             use x509_parser::oid_registry::OID_KEY_TYPE_EC_PUBLIC_KEY;
             use x509_parser::time::ASN1Time;
 
-            let now = ASN1Time::new(OffsetDateTime::from_unix_timestamp(now.as_secs() as i64).expect("time overflow"));
+            let now = ASN1Time::new(
+                OffsetDateTime::from_unix_timestamp(now.as_secs() as i64).expect("time overflow"),
+            );
 
             let x509 = X509Certificate::from_der(&end_entity.as_ref())
                 .map_err(|_| rustls::CertificateError::BadEncoding)?
@@ -810,10 +825,11 @@ pub mod client {
             }
 
             // TODO: Duplicates logic in `Certificate::from_der`, to avoid allocating
-            X509Certificate::from_der(end_entity.as_ref()).map_err(|_| rustls::CertificateError::BadEncoding)?;
+            X509Certificate::from_der(end_entity.as_ref())
+                .map_err(|_| rustls::CertificateError::BadEncoding)?;
             // TODO: Duplicates logic in `Certificate::hash`, to avoid allocating
             let end_entity_hash = Sha256Digest(Sha256::digest(end_entity.as_ref()).into());
-            
+
             if self.hashes.contains(&end_entity_hash) {
                 Ok(ServerCertVerified::assertion())
             } else {
@@ -822,25 +838,42 @@ pub mod client {
         }
 
         fn verify_tls12_signature(
-                &self,
-                message: &[u8],
-                cert: &CertificateDer<'_>,
-                dss: &rustls::DigitallySignedStruct,
-            ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls12_signature(message, cert, dss, &CryptoProvider::get_default().unwrap().signature_verification_algorithms)
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &rustls::DigitallySignedStruct,
+        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+            rustls::crypto::verify_tls12_signature(
+                message,
+                cert,
+                dss,
+                &CryptoProvider::get_default()
+                    .unwrap()
+                    .signature_verification_algorithms,
+            )
         }
 
         fn verify_tls13_signature(
-                &self,
-                message: &[u8],
-                cert: &CertificateDer<'_>,
-                dss: &rustls::DigitallySignedStruct,
-            ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls13_signature(message, cert, dss, &CryptoProvider::get_default().unwrap().signature_verification_algorithms)
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &rustls::DigitallySignedStruct,
+        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+            rustls::crypto::verify_tls13_signature(
+                message,
+                cert,
+                dss,
+                &CryptoProvider::get_default()
+                    .unwrap()
+                    .signature_verification_algorithms,
+            )
         }
 
         fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            CryptoProvider::get_default().unwrap().signature_verification_algorithms.supported_schemes()
+            CryptoProvider::get_default()
+                .unwrap()
+                .signature_verification_algorithms
+                .supported_schemes()
         }
     }
 }

@@ -43,7 +43,9 @@ impl QuicSendStream {
 
     #[inline(always)]
     pub fn finish(&mut self) -> Result<(), StreamWriteError> {
-        self.0.finish().map_err(|_| StreamWriteError::NotConnected)?;
+        self.0
+            .finish()
+            .map_err(|_| StreamWriteError::NotConnected)?;
         Ok(())
     }
 
@@ -161,7 +163,9 @@ impl QuicRecvStream {
             .read_exact(buf)
             .await
             .map_err(|quic_error| match quic_error {
-                quinn::ReadExactError::FinishedEarly(read) => StreamReadExactError::FinishedEarly(read),
+                quinn::ReadExactError::FinishedEarly(read) => {
+                    StreamReadExactError::FinishedEarly(read)
+                }
                 quinn::ReadExactError::ReadError(read) => StreamReadExactError::Read(read.into()),
             })
     }
@@ -544,7 +548,9 @@ impl From<quinn::WriteError> for StreamWriteError {
     fn from(error: quinn::WriteError) -> Self {
         match error {
             quinn::WriteError::Stopped(code) => StreamWriteError::Stopped(varint_q2w(code)),
-            quinn::WriteError::ConnectionLost(_) | quinn::WriteError::ClosedStream => StreamWriteError::NotConnected,
+            quinn::WriteError::ConnectionLost(_) | quinn::WriteError::ClosedStream => {
+                StreamWriteError::NotConnected
+            }
             quinn::WriteError::ZeroRttRejected => StreamWriteError::QuicProto,
         }
     }
@@ -554,7 +560,9 @@ impl From<quinn::ReadError> for StreamReadError {
     fn from(error: quinn::ReadError) -> Self {
         match error {
             quinn::ReadError::Reset(code) => StreamReadError::Reset(varint_q2w(code)),
-            quinn::ReadError::ConnectionLost(_) | quinn::ReadError::ClosedStream => StreamReadError::NotConnected,
+            quinn::ReadError::ConnectionLost(_) | quinn::ReadError::ClosedStream => {
+                StreamReadError::NotConnected
+            }
             quinn::ReadError::IllegalOrderedRead => StreamReadError::QuicProto,
             quinn::ReadError::ZeroRttRejected => StreamReadError::QuicProto,
         }

@@ -32,6 +32,12 @@ pub enum ConnectionError {
     /// The connection was closed because a QUIC protocol error.
     #[error("QUIC protocol error: {0}")]
     QuicProto(QuicProtoError),
+
+    /// The connection could not be created because not enough of the CID space is available
+    ///
+    /// Try using longer connection IDs.
+    #[error("CIDs exhausted")]
+    CidsExhausted,
 }
 
 impl ConnectionError {
@@ -121,7 +127,9 @@ impl ConnectingError {
         match error {
             quinn::ConnectError::EndpointStopping => ConnectingError::EndpointStopping,
             quinn::ConnectError::CidsExhausted => ConnectingError::CidsExhausted,
-            quinn::ConnectError::InvalidServerName(name) => ConnectingError::InvalidServerName(name),
+            quinn::ConnectError::InvalidServerName(name) => {
+                ConnectingError::InvalidServerName(name)
+            }
             quinn::ConnectError::InvalidRemoteAddress(socket_addr) => {
                 ConnectingError::InvalidRemoteAddress(socket_addr)
             }
@@ -290,10 +298,7 @@ impl From<quinn::ConnectionError> for ConnectionError {
             }),
             quinn::ConnectionError::TimedOut => ConnectionError::TimedOut,
             quinn::ConnectionError::LocallyClosed => ConnectionError::LocallyClosed,
-            quinn::ConnectionError::CidsExhausted => ConnectionError::QuicProto(QuicProtoError {
-                code: None,
-                reason: Cow::Borrowed("CIDs exhausted"),
-            })
+            quinn::ConnectionError::CidsExhausted => ConnectionError::CidsExhausted,
         }
     }
 }

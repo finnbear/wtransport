@@ -487,7 +487,10 @@ impl ServerConfigBuilder<states::WantsTransportConfigServer> {
     /// Completes configuration process.
     #[must_use]
     pub fn build(self) -> ServerConfig {
-        let mut quic_config = QuicServerConfig::with_crypto(Arc::new(quinn::crypto::rustls::QuicServerConfig::try_from(self.0.tls_config).expect("initial cipher suite missing")));
+        let mut quic_config = QuicServerConfig::with_crypto(Arc::new(
+            quinn::crypto::rustls::QuicServerConfig::try_from(self.0.tls_config)
+                .expect("TLS 1.3 cipher suite missing"),
+        ));
         quic_config.transport_config(Arc::new(self.0.transport_config));
         quic_config.migration(self.0.migration);
 
@@ -946,7 +949,10 @@ impl ClientConfigBuilder<states::WantsTransportConfigClient> {
     /// Completes configuration process.
     #[must_use]
     pub fn build(self) -> ClientConfig {
-        let mut quic_config = QuicClientConfig::new(Arc::new(quinn::crypto::rustls::QuicClientConfig::try_from(self.0.tls_config).expect("initial cipher suite missing")));
+        let mut quic_config = QuicClientConfig::new(Arc::new(
+            quinn::crypto::rustls::QuicClientConfig::try_from(self.0.tls_config)
+                .expect("TLS 1.3 cipher suite missing"),
+        ));
         quic_config.transport_config(Arc::new(self.0.transport_config));
 
         ClientConfig {
