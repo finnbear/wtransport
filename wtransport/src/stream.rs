@@ -45,12 +45,11 @@ impl SendStream {
 
     /// Shut down the stream gracefully.
     ///
-    /// No new data may be written after calling this method. Completes when the peer has
-    /// acknowledged all sent data, retransmitting data as needed.
+    /// No new data may be written after calling this method. In order to wait for the
+    /// peer to receive and acknowledge all data, wait for [`Self::stopped`].
     #[inline(always)]
-    pub async fn finish(&mut self) -> Result<(), StreamWriteError> {
-        self.0.finish()?;
-        self.0.stopped().await
+    pub fn finish(&mut self) -> Result<(), StreamWriteError> {
+        self.0.finish()
     }
 
     /// Returns the [`StreamId`] associated.
@@ -87,9 +86,12 @@ impl SendStream {
         self.0.reset(error_code);
     }
 
-    /// Awaits for the stream to be stopped by the peer.
+    /// Waits for the stream to be stopped.
     ///
-    /// If the stream is stopped the error code will be stored in [`StreamWriteError::Stopped`].
+    /// If the stream was finished locally ([`Self::finish`]), and the peer received and acknowledged all
+    /// data, returns [`Ok`].
+    ///
+    /// If the stream is stopped by the peer, the error code will be stored in [`StreamWriteError::Stopped`].
     #[inline(always)]
     pub async fn stopped(mut self) -> Result<(), StreamWriteError> {
         self.0.stopped().await
