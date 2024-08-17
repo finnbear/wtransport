@@ -789,7 +789,11 @@ pub mod client {
             use x509_parser::time::ASN1Time;
 
             let now = ASN1Time::new(
-                OffsetDateTime::from_unix_timestamp(now.as_secs() as i64).expect("time overflow"),
+                now.as_secs()
+                    .try_into()
+                    .ok()
+                    .and_then(|time| OffsetDateTime::from_unix_timestamp(time).ok())
+                    .expect("time overflow"),
             );
 
             let x509 = X509Certificate::from_der(end_entity.as_ref())
