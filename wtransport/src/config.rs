@@ -357,7 +357,7 @@ impl ServerConfigBuilder<states::WantsIdentity> {
     }
 
     /// Allows for manual configuration of a custom TLS setup using a provided
-    /// [`rustls::ServerConfig`], which must support TLS 1.3.
+    /// [`rustls::ServerConfig`].
     ///
     /// This method is provided for advanced users who need fine-grained control over the
     /// TLS configuration. It allows you to pass a preconfigured [`rustls::ServerConfig`]
@@ -365,6 +365,10 @@ impl ServerConfigBuilder<states::WantsIdentity> {
     ///
     /// Generally, it is recommended to use the [`with_identity`](Self::with_identity) method
     /// to configure TLS with safe defaults and an TLS [`Identity`].
+    ///
+    /// # Panics
+    ///
+    /// If `tls_config` doesn't support TLS 1.3.
     ///
     /// # Example
     ///
@@ -458,6 +462,10 @@ impl ServerConfigBuilder<states::WantsIdentity> {
     ///   detailed TLS settings, such as ciphersuites, certificate verification, and more.
     /// - `quic_transport_config`: A custom [`QuicTransportConfig`] instance that allows you to specify
     ///   various QUIC transport-layer settings according to your requirements.
+    ///
+    /// # Panics
+    ///
+    /// If `tls_config` doesn't support TLS 1.3.
     #[cfg(feature = "quinn")]
     #[cfg_attr(docsrs, doc(cfg(feature = "quinn")))]
     pub fn with_custom_tls_and_transport(
@@ -476,7 +484,8 @@ impl ServerConfigBuilder<states::WantsIdentity> {
         ServerConfigBuilder(states::WantsTransportConfigServer {
             bind_address: self.0.bind_address,
             dual_stack_config: self.0.dual_stack_config,
-            tls_config,
+            tls_config: quinn::crypto::rustls::QuicServerConfig::try_from(tls_config)
+                .expect("TLS 1.3 cipher suite missing"),
             transport_config,
             migration: true,
         })
@@ -485,16 +494,9 @@ impl ServerConfigBuilder<states::WantsIdentity> {
 
 impl ServerConfigBuilder<states::WantsTransportConfigServer> {
     /// Completes configuration process.
-    ///
-    /// # Panics
-    ///
-    /// If `with_custom_tls` was used without proper TLS 1.3 support.
     #[must_use]
     pub fn build(self) -> ServerConfig {
-        let mut quic_config = QuicServerConfig::with_crypto(Arc::new(
-            quinn::crypto::rustls::QuicServerConfig::try_from(self.0.tls_config)
-                .expect("TLS 1.3 cipher suite missing"),
-        ));
+        let mut quic_config = QuicServerConfig::with_crypto(Arc::new(self.0.tls_config));
         quic_config.transport_config(Arc::new(self.0.transport_config));
         quic_config.migration(self.0.migration);
 
@@ -857,7 +859,7 @@ impl ClientConfigBuilder<states::WantsRootStore> {
     }
 
     /// Allows for manual configuration of a custom TLS setup using a provided
-    /// [`rustls::ClientConfig`], which must support TLS 1.3.
+    /// [`rustls::ClientConfig`].
     ///
     /// This method is provided for advanced users who need fine-grained control over the
     /// TLS configuration. It allows you to pass a preconfigured [`rustls::ClientConfig`]
@@ -865,6 +867,10 @@ impl ClientConfigBuilder<states::WantsRootStore> {
     ///
     /// For most use cases, it is recommended to use the [`with_native_certs`](Self::with_native_certs)
     /// method to configure TLS with safe defaults.
+    ///
+    /// # Panics
+    ///
+    /// If `tls_config` doesn't support TLS 1.3.
     pub fn with_custom_tls(
         self,
         tls_config: TlsClientConfig,
@@ -924,6 +930,10 @@ impl ClientConfigBuilder<states::WantsRootStore> {
     ///   detailed TLS settings, such as ciphersuites, certificate verification, and more.
     /// - `quic_transport_config`: A custom [`QuicTransportConfig`] instance that allows you to specify
     ///   various QUIC transport-layer settings according to your requirements.
+    ///
+    /// # Panics
+    ///
+    /// If `tls_config` doesn't support TLS 1.3.
     #[cfg(feature = "quinn")]
     #[cfg_attr(docsrs, doc(cfg(feature = "quinn")))]
     pub fn with_custom_tls_and_transport(
@@ -942,7 +952,8 @@ impl ClientConfigBuilder<states::WantsRootStore> {
         ClientConfigBuilder(states::WantsTransportConfigClient {
             bind_address: self.0.bind_address,
             dual_stack_config: self.0.dual_stack_config,
-            tls_config,
+            tls_config: quinn::crypto::rustls::QuicClientConfig::try_from(tls_config)
+                .expect("TLS 1.3 cipher suite missing"),
             transport_config,
             dns_resolver: Box::<TokioDnsResolver>::default(),
         })
@@ -953,10 +964,7 @@ impl ClientConfigBuilder<states::WantsTransportConfigClient> {
     /// Completes configuration process.
     #[must_use]
     pub fn build(self) -> ClientConfig {
-        let mut quic_config = QuicClientConfig::new(Arc::new(
-            quinn::crypto::rustls::QuicClientConfig::try_from(self.0.tls_config)
-                .expect("TLS 1.3 cipher suite missing"),
-        ));
+        let mut quic_config = QuicClientConfig::new(Arc::new(self.0.tls_config));
         quic_config.transport_config(Arc::new(self.0.transport_config));
 
         ClientConfig {
@@ -1057,7 +1065,7 @@ pub mod states {
     pub struct WantsTransportConfigServer {
         pub(super) bind_address: SocketAddr,
         pub(super) dual_stack_config: Ipv6DualStackConfig,
-        pub(super) tls_config: TlsServerConfig,
+        pub(super) tls_config: quinn::crypto::rustls::QuicServerConfig,
         pub(super) transport_config: quinn::TransportConfig,
         pub(super) migration: bool,
     }
@@ -1066,7 +1074,7 @@ pub mod states {
     pub struct WantsTransportConfigClient {
         pub(super) bind_address: SocketAddr,
         pub(super) dual_stack_config: Ipv6DualStackConfig,
-        pub(super) tls_config: TlsClientConfig,
+        pub(super) tls_config: quinn::crypto::rustls::QuicClientConfig,
         pub(super) transport_config: quinn::TransportConfig,
         pub(super) dns_resolver: Box<dyn DnsResolver + Send + Sync + Unpin>,
     }
