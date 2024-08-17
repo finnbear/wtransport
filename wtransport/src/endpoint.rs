@@ -204,12 +204,6 @@ impl Endpoint<endpoint_side::Server> {
 
         Ok(())
     }
-
-    /// Rejects new incoming connections without affecting existing connections
-    #[deprecated = "this is no longer supported"]
-    pub fn reject_new_connections(&self) {
-        // See https://github.com/quinn-rs/quinn/commit/2925d2bd10a9c2baa6cbed0132e77e274c1a4a1a
-    }
 }
 
 impl Endpoint<endpoint_side::Client> {

@@ -795,7 +795,7 @@ pub mod client {
                 OffsetDateTime::from_unix_timestamp(now.as_secs() as i64).expect("time overflow"),
             );
 
-            let x509 = X509Certificate::from_der(&end_entity.as_ref())
+            let x509 = X509Certificate::from_der(end_entity.as_ref())
                 .map_err(|_| rustls::CertificateError::BadEncoding)?
                 .1;
 
